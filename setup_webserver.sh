@@ -10,6 +10,7 @@ set -euo pipefail
 # --- Configuration -----------------------------------------------------------
 APP_USER="${SUDO_USER:-$(whoami)}"
 APP_DIR="/home/${APP_USER}/webapp"
+VENV_DIR="${APP_DIR}/venv"
 APP_FILE="webserver.py"
 SERVICE_NAME="flask_app"
 NGINX_SITE="flask_app"
@@ -35,21 +36,23 @@ error()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 info "Updating package index..."
 apt-get update -qq
 
-info "Installing Python3, pip, and Nginx..."
-apt-get install -y python3 python3-pip nginx
+info "Installing Python3, venv, and Nginx..."
+apt-get install -y python3 python3-venv python3-full nginx
 
 # =============================================================================
-# STEP 2 — Python dependencies
+# STEP 2 — Python virtual environment and dependencies
 # =============================================================================
-info "Installing Flask and Gunicorn..."
-pip3 install --quiet flask gunicorn
+info "Creating Python virtual environment at ${VENV_DIR}..."
+mkdir -p "${APP_DIR}"
+python3 -m venv "${VENV_DIR}"
+
+info "Installing Flask and Gunicorn inside venv..."
+"${VENV_DIR}/bin/pip" install --quiet flask gunicorn
 
 # =============================================================================
 # STEP 3 — Application directory and source file
 # =============================================================================
 info "Setting up application directory at ${APP_DIR}..."
-mkdir -p "${APP_DIR}"
-
 APP_PATH="${APP_DIR}/${APP_FILE}"
 
 if [[ -f "${APP_PATH}" ]]; then
@@ -74,7 +77,7 @@ chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}"
 # =============================================================================
 # STEP 4 — Systemd service for Gunicorn
 # =============================================================================
-GUNICORN_BIN="$(which gunicorn)"
+GUNICORN_BIN="${VENV_DIR}/bin/gunicorn"
 
 info "Creating systemd service: ${SERVICE_NAME}..."
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<EOF

@@ -27,9 +27,9 @@ The Edge-Firewall acts as the gateway for all internal segments and manages exte
 
 ### 3.1 Interface Mapping
 Assign three network adapters to the Edge-Firewall virtual machine in the following order:
-*   **Adapter 1 (ens160):** Assigned to `PG-WAN`.
-*   **Adapter 2 (ens192):** Assigned to `PG-DMZ`.
-*   **Adapter 3 (ens224):** Assigned to `PG-INT`.
+*   **Adapter 1 (ens33):** Assigned to `PG-WAN`.
+*   **Adapter 2 (ens36):** Assigned to `PG-DMZ`.
+*   **Adapter 3 (ens37):** Assigned to `PG-INT`.
 
 ### 3.2 Network Addressing (Netplan)
 Configure the interfaces using a static IP assignment. Edit the configuration file located at `/etc/netplan/01-netcfg.yaml`.
@@ -38,18 +38,18 @@ Configure the interfaces using a static IP assignment. Edit the configuration fi
 network:
   version: 2
   ethernets:
-    ens160: # External WAN Interface
+    ens33: # External WAN Interface
       addresses:
         - 172.24.131.210/24
       gateway4: 172.24.131.1
       nameservers:
         addresses: [172.24.131.254, 8.8.8.8]
 
-    ens192: # DMZ Segment Interface
+    ens36: # DMZ Segment Interface
       addresses:
         - 192.168.20.1/24
 
-    ens224: # Internal Segment Interface
+    ens37: # Internal Segment Interface
       addresses:
         - 192.168.30.1/24
 ```
@@ -63,16 +63,16 @@ Enable the Linux kernel's IPv4 forwarding and configure `iptables` to perform MA
 `sudo sysctl -w net.ipv4.ip_forward=1`
 
 **2. Configure NAT:**
-`sudo iptables -t nat -A POSTROUTING -o ens160 -j MASQUERADE`
+`sudo iptables -t nat -A POSTROUTING -o ens33 -j MASQUERADE`
 
 **3. Configure Forwarding Policies:**
 Allow traffic from the DMZ and Internal segments to the WAN interface:
-`sudo iptables -A FORWARD -i ens192 -o ens160 -j ACCEPT`
-`sudo iptables -A FORWARD -i ens224 -o ens160 -j ACCEPT`
+`sudo iptables -A FORWARD -i ens36 -o ens33 -j ACCEPT`
+`sudo iptables -A FORWARD -i ens37 -o ens33 -j ACCEPT`
 
 Allow established and related return traffic to penetrate the firewall:
-`sudo iptables -A FORWARD -i ens160 -o ens192 -m state --state RELATED,ESTABLISHED -j ACCEPT`
-`sudo iptables -A FORWARD -i ens160 -o ens224 -m state --state RELATED,ESTABLISHED -j ACCEPT`
+`sudo iptables -A FORWARD -i ens33 -o ens36 -m state --state RELATED,ESTABLISHED -j ACCEPT`
+`sudo iptables -A FORWARD -i ens33 -o ens37 -m state --state RELATED,ESTABLISHED -j ACCEPT`
 
 ## 4. Client Host Configuration
 Hosts within the DMZ and Internal segments must use the Edge-Firewall as their default gateway.
